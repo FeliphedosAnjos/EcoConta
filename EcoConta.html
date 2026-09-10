@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EcoConta - Água e Energia</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:Arial,sans-serif;margin:0;background:#f4f7f5;color:#222}
+header{background:#2e7d32;color:white;padding:24px;text-align:center}
+main{max-width:900px;margin:25px auto;padding:0 15px}
+.card{background:white;border-radius:10px;padding:22px;margin-bottom:18px;box-shadow:0 2px 8px #0001}
+h2{margin-top:0;color:#2e7d32}
+label{display:block;margin-top:12px;font-weight:bold}
+input{width:100%;padding:10px;margin-top:5px;border:1px solid #bbb;border-radius:6px;font-size:16px}
+button{background:#2e7d32;color:white;border:0;border-radius:6px;padding:11px 16px;margin-top:15px;font-size:16px;cursor:pointer}
+button:hover{background:#256428}
+.secondary{background:#555;margin-left:8px}
+.secondary:hover{background:#444}
+.resultado{margin-top:18px;padding:15px;background:#eef7ef;border-radius:8px;line-height:1.7}
+table{width:100%;border-collapse:collapse;margin-top:15px}
+th,td{border:1px solid #ddd;padding:10px;text-align:center}
+th{background:#e8f2e8}
+.dicas li{margin:10px 0}
+footer{text-align:center;color:#666;padding:20px}
+.small{font-size:14px;color:#666}
+</style>
+</head>
+<body>
+<header>
+<h1>🌱 EcoConta</h1>
+<p>Controle simples dos gastos com água e energia</p>
+</header>
+
+<main>
+<div class="card">
+<h2>Registrar uma conta</h2>
+<p class="small">Informe os valores mensais para acompanhar seus gastos.</p>
+
+<label for="mes">Mês de referência</label>
+<input type="month" id="mes">
+
+<label for="agua">Valor da conta de água (R$)</label>
+<input type="number" id="agua" min="0" step="0.01" placeholder="Ex.: 80,00">
+
+<label for="energia">Valor da conta de energia (R$)</label>
+<input type="number" id="energia" min="0" step="0.01" placeholder="Ex.: 150,00">
+
+<button onclick="adicionar()">Salvar registro</button>
+<button class="secondary" onclick="limparTudo()">Limpar histórico</button>
+</div>
+
+<div class="card">
+<h2>Estimativa de economia</h2>
+<p>Escolha uma redução estimada no consumo para visualizar uma possível economia.</p>
+
+<label for="reducao">Redução estimada (%)</label>
+<input type="number" id="reducao" min="0" max="100" value="10">
+
+<button onclick="calcularEconomia()">Calcular economia</button>
+
+<div id="resultado" class="resultado">
+Registre pelo menos uma conta e faça o cálculo.
+</div>
+</div>
+
+<div class="card">
+<h2>Histórico de gastos</h2>
+<div id="historico">Nenhum registro adicionado.</div>
+</div>
+
+<div class="card dicas">
+<h2>Dicas para reduzir o consumo</h2>
+<ul>
+<li>Apague as luzes de ambientes que não estão sendo utilizados.</li>
+<li>Evite banhos muito longos.</li>
+<li>Desligue aparelhos da tomada quando possível.</li>
+<li>Observe vazamentos e torneiras pingando.</li>
+<li>Acompanhe suas contas mensalmente para identificar aumentos.</li>
+</ul>
+</div>
+</main>
+
+<footer>
+Projeto acadêmico EcoConta – Hábitos de Consumo e Economia
+</footer>
+
+<script>
+let registros = JSON.parse(localStorage.getItem("ecocontaRegistros") || "[]");
+
+function moeda(valor){
+  return Number(valor).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+}
+
+function salvar(){
+  localStorage.setItem("ecocontaRegistros", JSON.stringify(registros));
+}
+
+function adicionar(){
+  const mes = document.getElementById("mes").value;
+  const agua = parseFloat(document.getElementById("agua").value);
+  const energia = parseFloat(document.getElementById("energia").value);
+
+  if(!mes || isNaN(agua) || isNaN(energia) || agua < 0 || energia < 0){
+    alert("Preencha o mês e valores válidos para água e energia.");
+    return;
+  }
+
+  registros.push({mes, agua, energia});
+  registros.sort((a,b)=>a.mes.localeCompare(b.mes));
+  salvar();
+  atualizarHistorico();
+
+  document.getElementById("agua").value="";
+  document.getElementById("energia").value="";
+  alert("Registro salvo com sucesso!");
+}
+
+function atualizarHistorico(){
+  const area=document.getElementById("historico");
+
+  if(registros.length===0){
+    area.innerHTML="Nenhum registro adicionado.";
+    return;
+  }
+
+  let html="<table><tr><th>Mês</th><th>Água</th><th>Energia</th><th>Total</th></tr>";
+
+  registros.forEach(r=>{
+    const total=r.agua+r.energia;
+    const [ano,mes]=r.mes.split("-");
+    html+=`<tr><td>${mes}/${ano}</td><td>${moeda(r.agua)}</td><td>${moeda(r.energia)}</td><td>${moeda(total)}</td></tr>`;
+  });
+
+  html+="</table>";
+  area.innerHTML=html;
+}
+
+function calcularEconomia(){
+  if(registros.length===0){
+    document.getElementById("resultado").innerHTML="Primeiro registre pelo menos uma conta.";
+    return;
+  }
+
+  const percentual=parseFloat(document.getElementById("reducao").value);
+
+  if(isNaN(percentual) || percentual<0 || percentual>100){
+    alert("Informe uma porcentagem entre 0 e 100.");
+    return;
+  }
+
+  const ultimo=registros[registros.length-1];
+  const total=ultimo.agua+ultimo.energia;
+  const economiaMensal=total*(percentual/100);
+  const economiaAnual=economiaMensal*12;
+
+  document.getElementById("resultado").innerHTML=
+    `<strong>Com base no último registro:</strong><br>
+    Gasto mensal atual: ${moeda(total)}<br>
+    Redução estimada: ${percentual}%<br>
+    <strong>Possível economia mensal: ${moeda(economiaMensal)}</strong><br>
+    <strong>Possível economia anual: ${moeda(economiaAnual)}</strong><br>
+    <span class="small">Esta é apenas uma estimativa baseada nos valores informados.</span>`;
+}
+
+function limparTudo(){
+  if(confirm("Deseja apagar todo o histórico?")){
+    registros=[];
+    salvar();
+    atualizarHistorico();
+    document.getElementById("resultado").innerHTML="Histórico apagado.";
+  }
+}
+
+atualizarHistorico();
+</script>
+</body>
+</html>
